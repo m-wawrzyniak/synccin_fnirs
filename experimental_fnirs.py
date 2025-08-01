@@ -79,8 +79,6 @@ def get_data():
         print(f"Data: {sample} at {timestamp}")
 
 
-
-
 def start_cortiview_recording(filename: str = "session"):
     """
     Sends a REST command to CortiView2 to start recording.
