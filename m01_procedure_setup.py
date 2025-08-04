@@ -136,7 +136,7 @@ def create_cortiview_recording_name(expInfo):
     ses_date, ses_time = expInfo['date'][:-7].split('_')
     ses_date = ses_date.replace('-', '_')
     ses_time = ses_time.replace('h', '')
-    cortiview_filename = f"{ses_date}_et_{ses_time}_{expInfo['participant']}"
+    cortiview_filename = f"{ses_date}_fnirs_{ses_time}_{expInfo['participant']}"
 
     return cortiview_filename
 

@@ -3,8 +3,11 @@ from pylsl import StreamInfo, StreamOutlet
 import time
 import requests
 
+from config import LSL_CHILD_INPUT, LSL_CHILD_OUTPUT, LSL_CHILD_DATA_OUTPUT
+from config import LSL_CAREGIVER_INPUT, LSL_CAREGIVER_OUTPUT, LSL_CAREGIVER_DATA_OUTPUT
 
-def get_markers():
+
+def get_markers(stream_name):
     """
     Sees the markers when pressed on CortiView. OK
     :return:
@@ -59,7 +62,6 @@ def send_marker():
         print(f"Sent marker: {marker}")
         time.sleep(1)  # Wait to ensure CortiView receives it
 
-
 def get_data():
     """
     Gets the data ad hoc!!!
@@ -77,7 +79,6 @@ def get_data():
     while True:
         sample, timestamp = inlet.pull_sample()
         print(f"Data: {sample} at {timestamp}")
-
 
 def start_cortiview_recording(filename: str = "session"):
     """
@@ -99,5 +100,20 @@ def start_cortiview_recording(filename: str = "session"):
         print(f"⚠️ Error connecting to CortiView: {e}")
         return False
 
+# finding caregiver
+streams = resolve_byprop('name', LSL_CAREGIVER_OUTPUT, timeout=5)
+if not streams:
+    raise RuntimeError("Stream not found!")
+caregiver_inlet = StreamInlet(streams[0])
 
-start_cortiview_recording()
+# finding child
+streams = resolve_byprop('name', LSL_CHILD_OUTPUT, timeout=5)
+if not streams:
+    raise RuntimeError("Stream not found!")
+child_inlet = StreamInlet(streams[0])
+
+# Read markers
+while True:
+    ch_sample, ch_timestamp = child_inlet.pull_sample()
+    cg_sample, cg_timestamp = caregiver_inlet.pull_sample()
+    print(f"Received markers: \n child {ch_sample[0]} at {ch_timestamp} \n caregiver {cg_sample[0]} at {cg_timestamp}")
