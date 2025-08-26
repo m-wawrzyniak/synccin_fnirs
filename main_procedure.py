@@ -155,7 +155,7 @@ if start_stage <= 4:
         comms.start_recording(device_ip=CHILD_IP, rest_port=REST_API_PORT_CHILD,
                               save_path=f'{cortiview_filename}_d_{i}')
         comms.start_recording(device_ip=CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER,
-                              save_path=f'{cortiview_filename}_d_{i}')
+                              save_path=f'{cortiview_filename}_m_{i}')
 
         time.sleep(1)
         comms.send_marker(msg=f'{i}_start', outlet=child_outlet, msg_marker_map=MARKER_MAP)
