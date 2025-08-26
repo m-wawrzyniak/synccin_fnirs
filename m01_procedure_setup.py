@@ -119,7 +119,7 @@ def setup_windows(win_id_master, win_id_main, expInfo):
         winType='pyglet', allowStencil=False,
         monitor=gigabyte_monitor, color=background_clr, colorSpace='rgb',
         blendMode='avg', useFBO=True,
-        units='norm', checkTiming=False)
+        units='norm')
     win_main.mouseVisible = True
 
     win_master = visual.Window(
@@ -127,7 +127,7 @@ def setup_windows(win_id_master, win_id_main, expInfo):
         winType='pyglet', allowStencil=False,
         monitor=test_monitor, color=background_clr, colorSpace='rgb',
         blendMode='avg', useFBO=True,
-        units='norm', checkTiming=False)
+        units='norm')
     print("Windows defined")
 
     return win_main, win_master, gigabyte_monitor, test_monitor

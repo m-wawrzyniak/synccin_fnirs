@@ -20,7 +20,7 @@ PROCEDURE TIMELINE:
 """
 import time
 
-from psychopy import visual, core, logging
+from psychopy import sound, gui, visual, core, data, event, logging, clock, colors, layout, monitors
 import numpy as np
 
 import m01_procedure_setup as setup
