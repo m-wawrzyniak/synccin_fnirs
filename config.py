@@ -1,5 +1,5 @@
 # global
-PROCEDURE_SAVE_DIR = "C:/Users/matti/PycharmProjects/syncc_in_fnirs/save_dir"
+PROCEDURE_SAVE_DIR = "C:/Users/Badania/OneDrive/Pulpit/Syncc-In/fnirs_data"
 WIFI_NAME = 'cortivision_mobile'
 WIFI_PASS = 'fnirs2024'
 
@@ -8,9 +8,6 @@ REST_API_PORT_CAREGIVER = '8888'
 
 CHILD_IP = "localhost"
 CAREGIVER_IP = "192.168.76.100"
-
-CHILD_PC_DATA_DIR = "C:/Users/matti/Desktop/SYNCC_IN/data/"
-CAREGIVER_PC_DATA_DIR = "C:/Users/User/Desktop/Syncc-In/fNIRS_data/"
 
 MARKER_MAP = {
     'm1_start': '1',
@@ -36,7 +33,7 @@ WIN_SIZES = [None, None]
 WIN_SIZES[WIN_ID_MASTER] = (1920,1080)
 WIN_SIZES[WIN_ID_MAIN] = (2560, 1440)
 
-MOVIES_DIR = "C:/Users/matti/PycharmProjects/syncc_in_fnirs/movies"
+MOVIES_DIR = "C:/movies_et"
 
 MOVIE_1_PATH = f'{MOVIES_DIR}/norm_mov1.mp4'
 MOVIE_2_PATH = f'{MOVIES_DIR}/norm_mov2.mp4'

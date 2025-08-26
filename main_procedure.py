@@ -33,7 +33,6 @@ from config import PHOTO_POS
 from config import CHILD_IP, REST_API_PORT_CHILD, CAREGIVER_IP, REST_API_PORT_CAREGIVER
 from config import LSL_CHILD_INPUT, LSL_CAREGIVER_INPUT
 from config import MARKER_MAP
-from config import CHILD_PC_DATA_DIR, CAREGIVER_PC_DATA_DIR
 from config import MOVIE_1_PATH, MOVIE_2_PATH, MOVIE_3_PATH
 
 ### STAGE 1: SETUP
@@ -83,9 +82,9 @@ if start_stage <= 3:
 
     # 0. Starting fNIRS recording
     comms.start_recording(device_ip= CHILD_IP, rest_port=REST_API_PORT_CHILD,
-                          save_path=f'{CHILD_PC_DATA_DIR}')
+                          save_path=f'{cortiview_filename}_d_movies')
     comms.start_recording(device_ip= CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER,
-                          save_path=f'{CAREGIVER_PC_DATA_DIR}')
+                          save_path=f'{cortiview_filename}_m_movies')
 
     # 1. VERBATIM: Initializing stimuli
     movies, rand_movies, photo_rect_on, photo_rect_off, cross = setup.setup_main_stimuli(win_main,
@@ -148,9 +147,9 @@ if start_stage <= 4:
 
         # Starting recording
         comms.start_recording(device_ip=CHILD_IP, rest_port=REST_API_PORT_CHILD,
-                              save_path=f'{CHILD_PC_DATA_DIR}')
+                              save_path=f'{cortiview_filename}_d_{i}')
         comms.start_recording(device_ip=CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER,
-                              save_path=f'{CAREGIVER_PC_DATA_DIR}')
+                              save_path=f'{cortiview_filename}_d_{i}')
 
         time.sleep(1)
         comms.send_marker(msg=f'{i}_start', outlet=child_outlet, msg_marker_map=MARKER_MAP)

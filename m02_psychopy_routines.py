@@ -1,7 +1,6 @@
 from psychopy.constants import (NOT_STARTED, STARTED, PLAYING, PAUSED,
                                 STOPPED, FINISHED, PRESSED, RELEASED, FOREVER)
 from psychopy import visual, core, event, sound
-import msgpack as serializer
 
 from config import FRAME_TOLERANCE
 
