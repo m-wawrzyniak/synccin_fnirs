@@ -12,7 +12,7 @@ PROCEDURE SETUP:
 
 PROCEDURE TIMELINE:
 0. Diade metadata input.
-1. Calibration is started in both CortiView instaces. TODO check if any data comes back from the calibration
+1. Calibration is started in both CortiView instaces.
 2. Start plotting on both CortiView instances.
 3. Start recording on both CortiView instances.
 3. Show three videos. Proper marking.
@@ -20,14 +20,14 @@ PROCEDURE TIMELINE:
 """
 import time
 
-from psychopy import sound, gui, visual, core, data, event, logging, clock, colors, layout, monitors
-import psychopy.iohub as io
-from psychopy.hardware import keyboard
-import ast
+from psychopy import visual, core, logging
+import numpy as np
 
 import m01_procedure_setup as setup
 import m02_psychopy_routines as routines
 import m03_cortiview_comms as comms
+
+
 from config import WIN_ID_MAIN, WIN_ID_MASTER, WIN_SIZES
 from config import PHOTO_POS
 from config import CHILD_IP, REST_API_PORT_CHILD, CAREGIVER_IP, REST_API_PORT_CAREGIVER
@@ -76,7 +76,7 @@ if start_stage <= 2:
 
 ### STAGE 3: MOVIES
 routines.interrupt('Press \'x\', when calibration has been successful. This will start recording and initialize the stimuli.', win_master, ['x'])
-movies = None
+movie_paths = None
 
 if start_stage <= 3:
 
@@ -87,9 +87,11 @@ if start_stage <= 3:
                           save_path=f'{cortiview_filename}_m_movies')
 
     # 1. VERBATIM: Initializing stimuli
-    movies, rand_movies, photo_rect_on, photo_rect_off, cross = setup.setup_main_stimuli(win_main,
-                                                                                         MOVIE_1_PATH, MOVIE_2_PATH, MOVIE_3_PATH,
-                                                                                         photo_pos=PHOTO_POS)
+    photo_rect_on, photo_rect_off, cross = setup.setup_helper_stimuli(win_main, photo_pos=PHOTO_POS)
+
+    movie_paths = {'m1': MOVIE_1_PATH, 'm2': MOVIE_2_PATH, 'm3': MOVIE_3_PATH}
+    rand_movies = list(np.random.permutation(list(movie_paths.keys())))
+
     expInfo['mov_order'] = rand_movies  # Save the order of the movies
     cross.draw()  # Draw focus cross before the first movie
     win_main.flip()  # Refresh window
@@ -101,7 +103,11 @@ if start_stage <= 3:
     for i in range(len(rand_movies)):
         # Movie setup
         mov_name = rand_movies[i] # Pick movie
-        movie = movies[mov_name] # Pack it into components list
+        movie_path = movie_paths[mov_name] # Pack it into components list
+        print(f'Initializing {mov_name}...')
+        movie = visual.MovieStim(win_main, movie_path, size=(2560, 1440))
+        print(f'{mov_name} initialized.')
+
         routines.setup_routine_components([movie]) # Set it up for routine
 
         # Sending markers for movie start
@@ -134,7 +140,7 @@ if start_stage <= 3:
 
 ### STAGE 4: FREE CONVERSATIOM
 if start_stage <= 4:
-    if movies is None:
+    if movie_paths is None:
         photo_rect_on, photo_rect_off = setup.setup_free_convo_stimuli(win_main)
 
     # Fetching info about the free conversation
