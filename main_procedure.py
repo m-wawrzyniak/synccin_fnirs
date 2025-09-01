@@ -59,20 +59,12 @@ defaultKeyboard = setup.io_setup(win_main, expInfo=expInfo)
 # Paths setup
 cortiview_filename = setup.create_cortiview_recording_name(expInfo)
 
-# TODO: Verify whether there really are only 4 devices in the network - maybe even with specific IP.
 # Check if CortiVisions are setup:
 comms.check_connection(device_ip=CHILD_IP, rest_port=REST_API_PORT_CHILD)
 comms.check_connection(device_ip=CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER)
 # Create LSL Outlets:
 child_outlet = comms.setup_lsl_channel(stream_in_name=LSL_CHILD_INPUT)
 caregiver_outlet = comms.setup_lsl_channel(stream_in_name=LSL_CAREGIVER_INPUT)
-
-### STAGE 2: CALIBRATION
-if start_stage <= 2:
-    routines.interrupt('Press \'x\', when fNIRS caps are properly set. This will start automatic calibration of caregiver fNIRS', win_master, ['x'])
-    #comms.start_calibration(rest_port=REST_API_PORT_CAREGIVER, template_path="C:/syncc_in/Cortiview 2/test_child.template")
-    routines.interrupt('Press \'x\', when caregiver calibration has been successful. This will start automatic calibration of child fNIRS', win_master, ['x'])
-    #comms.start_calibration(rest_port=REST_API_PORT_CHILD, template_path="C:/syncc_in/Cortiview 2/test_child.template")
 
 ### STAGE 3: MOVIES
 routines.interrupt('Press \'x\', when calibration has been successful. This will start recording and initialize the stimuli.', win_master, ['x'])

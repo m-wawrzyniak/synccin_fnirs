@@ -50,7 +50,6 @@ def setup_routine_components(components):
             comp.status = NOT_STARTED
 
 def run_routine(win, routine_components, routine_timer, defaultKeyboard, msg='Running routine...', duration=None, escape_key="escape"):
-    # TODO: duration is not safe, without specyfing it the code crashes
     """
     Using specific window 'win' (psychopy.visual.Window), creates routine segment with routine_componentes (list of PsychoPy stimuli) and runs it.
       routine_timer - (psychopy.core.Clock) Internal PsychoPy Clock
