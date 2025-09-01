@@ -141,18 +141,7 @@ def create_cortiview_recording_name(expInfo):
     return cortiview_filename
 
 
-def setup_main_stimuli(win, vid1_path, vid2_path, vid3_path, photo_pos):
-    # TODO: Right after initialization, there is a brief sound from Merida. And only this brief sound is repeated at the end of Merida. Only Merida is repeated!
-    # Stim init
-    print('Initializing stimuli...')
-    movie_1 = visual.MovieStim(win, vid1_path, size=(2560, 1440))
-    print('m1 initialized...')
-    movie_2 = visual.MovieStim(win, vid2_path, size=(2560, 1440))
-    print('m2 initialized...')
-    movie_3 = visual.MovieStim(win, vid3_path, size=(2560, 1440))
-    print('m3 initialized...')
-    movies = {'m1': movie_1, 'm2': movie_2, 'm3': movie_3}
-    rand_movies = list(np.random.permutation(list(movies.keys())))
+def setup_helper_stimuli(win, photo_pos):
 
     # Photodiode rectangle init
     size = 0.1
@@ -184,7 +173,7 @@ def setup_main_stimuli(win, vid1_path, vid2_path, vid3_path, photo_pos):
         )
     photo_rect_off.draw()
     win.flip()
-    return movies, rand_movies, photo_rect_on, photo_rect_off, cross
+    return photo_rect_on, photo_rect_off, cross
 
 def setup_free_convo_stimuli(win, photo_pos=(1, 0)):
 

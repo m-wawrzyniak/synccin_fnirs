@@ -18,7 +18,6 @@ def check_connection(device_ip, rest_port):
         return False
 
 def start_calibration(rest_port, template_path):
-    # TODO: calibration handler wymaga konkretnego formatu *json do rozpoczęcia kalibracji, jednak nie wiem jeszcze jakiego.
     url = f"http://localhost:{rest_port}/calibrateNirs"
     try:
         with open(template_path, 'r') as f:

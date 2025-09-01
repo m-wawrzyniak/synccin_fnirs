@@ -3,7 +3,7 @@ PROCEDURE_SAVE_DIR = "C:/Users/Badania/OneDrive/Pulpit/Syncc-In/fnirs_data"
 WIFI_NAME = 'cortivision_mobile'
 WIFI_PASS = 'fnirs2024'
 
-REST_API_PORT_CHILD = '8888'
+REST_API_PORT_CHILD = '8887'
 REST_API_PORT_CAREGIVER = '8888'
 
 CHILD_IP = "localhost"
