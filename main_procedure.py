@@ -52,7 +52,6 @@ routineTimer = core.Clock()  # to track time remaining of each (possibly non-sli
 endExpNow = False  # flag for 'escape' or other condition => quit the exp
 
 # Screen setup
-#setup.check_screen_id_assignment()
 win_main, win_master, gigabyte_mon, test_mon = setup.setup_windows(win_id_master=WIN_ID_MASTER, win_id_main=WIN_ID_MAIN, expInfo=expInfo)
 defaultKeyboard = setup.io_setup(win_main, expInfo=expInfo)
 
