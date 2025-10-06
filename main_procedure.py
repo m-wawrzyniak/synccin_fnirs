@@ -107,7 +107,6 @@ if start_stage <= 3:
         comms.send_marker(msg=f"{mov_name}_start", outlet=caregiver_outlet, msg_marker_map=MARKER_MAP)
 
         # Running routine
-        #movie.reset()  # Synchronize audio with video.
         routines.run_stimulus_routine(win_main,
                                       mov_name, movie, photo_rect_on, photo_rect_off,
                                       routineTimer, thisExp, defaultKeyboard,

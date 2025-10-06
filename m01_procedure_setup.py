@@ -1,35 +1,34 @@
+"""
+Setup for logging paths, screens, windows, PsychoPy handlers, Pupil Capture communication and presented stimuli.
+"""
+
 import os
-import zmq
-import time
-import numpy as np
 import ast
 import pyglet
 
-from numpy.random import random, randint, normal, shuffle, choice as randchoice
+from numpy.random import randint
 from psychopy import sound, gui, visual, core, data, event, logging, clock, colors, layout, monitors
-import msgpack
 import psychopy.iohub as io
 from psychopy.hardware import keyboard
-
 
 from config import LOG_DIR, WIN_SIZES
 
 def setup_path_log_psychopy():
     """
-    Setup paths and logs for ET procedure.
+    Setup paths and logs for fNIRS procedure.
 
     Returns:
         - expInfo (dict) Dictionary of experiment information (name:value)
-        - thisExp (ExperimentHandler) ???
-        - logFile (LogFile) ???
+        - thisExp (ExperimentHandler)
+        - logFile (LogFile)
         - filename (str) Absolute path for saving all data and logs.
     """
     os.makedirs(LOG_DIR, exist_ok=True)
     os.chdir(LOG_DIR)
 
-    # Info about experimental session and what goes into GUI dialog
+    # exp session info
     psychopyVersion = '2024.2.4'
-    expName = 'et_syncc_in_procedure'
+    expName = 'fnirs_syncc_in_procedure'
     expInfo = {
         'participant': f"{randint(0, 999999):06.0f}",
         'session': '001',
@@ -39,9 +38,9 @@ def setup_path_log_psychopy():
         'debug mode': ['False', 'True'],
         'start at stage': ['2. Calibration', '3. Movies', '4. Free convo']
     }
-    print(f"Syncc-In ET procedure, participant: {expInfo['participant']}")
+    print(f"Syncc-In fNIRS procedure, participant: {expInfo['participant']}")
 
-    # Participant info dialog
+    # diad info
     session_win = True
     if session_win:
         dlg = gui.DlgFromDict(dictionary=expInfo, sortKeys=False, title=expName)
@@ -66,10 +65,19 @@ def setup_path_log_psychopy():
     logging.console.setLevel(logging.WARNING)  # this outputs to the screen, not a file
 
 
-
     return expInfo, thisExp, logFile, log_path
 
 def io_setup(main_win, expInfo):
+    """
+    Setup ups PsychoPy IO devices.
+
+    Args:
+        main_win (Window): PsychoPy window, presented to the Subjects.
+        expInfo (dict): Dictionary of experiment information (name:value)
+
+    Returns:
+        defaultKeyBoard
+    """
     ioConfig = {}
     ioConfig['Keyboard'] = dict(use_keymap='psychopy')
     ioServer = io.launchHubServer(window=main_win, **ioConfig)
@@ -81,33 +89,51 @@ def io_setup(main_win, expInfo):
     return defaultKeyboard
 
 def check_screen_id_assignment():
+    """
+    Makes sure that monitor configuration at Win level is correct.
+    """
     screens = pyglet.canvas.get_display().get_screens()
 
     for i, screen in enumerate(screens):
         print(f"Screen {i}: {screen.width}x{screen.height}, x={screen.x}, y={screen.y}")
         if screen.width != WIN_SIZES[i][0] or screen.height != WIN_SIZES[i][1]:
-            raise TypeError('Screen IDs are wrong!')
+            raise TypeError('Screen IDs are wrong.')
 
 def setup_windows(win_id_master, win_id_main, expInfo):
+    """
+    Creates PsychoPy.Window objects used during the procedure.
+
+    Args:
+        win_id_master (int) : ID of the window presented on Master PC.
+        win_id_main (int) : ID of the window presented Subject PC.
+        expInfo (dict): Experimental info dictionary.
+
+    Returns:
+        win_main (Window): PsychoPy Window object presented on Subject PC.
+        win_master (Window): PsychoPy Window object presented on Master PC.
+        gigabyte_monitor (Monitor): PsychoPy Monitor object representing Subject monitor.
+        test_monitor (Monitor): PsychoPy Monitor object representing Master monitor.
+    """
     all_monitors = monitors.getAllMonitors()
     print(f"Available monitors: {all_monitors}")
 
-    # Define monitor specifications
+    # subject monitor specs
     gigabyte_monitor = monitors.Monitor('GIGABYTE')
-    gigabyte_monitor.setWidth(52.7)  # Width in cm (adjust for your monitor)
-    gigabyte_monitor.setSizePix([2560, 1440])  # Resolution
-    gigabyte_monitor.setDistance(57)  # Distance from the screen in cm
-    gigabyte_monitor.saveMon()  # Save the monitor configuration
+    gigabyte_monitor.setWidth(52.7)
+    gigabyte_monitor.setSizePix([2560, 1440])
+    gigabyte_monitor.setDistance(65)
+    gigabyte_monitor.saveMon()
 
+    # master monitor specs
     test_monitor = monitors.Monitor('testMonitor')
-    test_monitor.setWidth(30.0)  # Width in cm (adjust for your monitor)
-    test_monitor.setSizePix([640, 480])  # Resolution
-    test_monitor.setDistance(50)  # Distance from the screen in cm
-    test_monitor.saveMon()  # Save the monitor configuration
+    test_monitor.setWidth(30.0)
+    test_monitor.setSizePix([640, 480])
+    test_monitor.setDistance(50)
+    test_monitor.saveMon()
 
-    bckgnd_clr_str = expInfo['window background color']  # Get bckgnd color from UI
+    bckgnd_clr_str = expInfo['window background color']
     try:
-        background_clr = ast.literal_eval(bckgnd_clr_str)  # Convert it to a list of RGB
+        background_clr = ast.literal_eval(bckgnd_clr_str)
     except:
         background_clr = None
 
@@ -133,6 +159,16 @@ def setup_windows(win_id_master, win_id_main, expInfo):
     return win_main, win_master, gigabyte_monitor, test_monitor
 
 def create_cortiview_recording_name(expInfo):
+    """
+    Creates standardized recording name fed to Cortiview instances.
+
+    Args:
+        expInfo (dict): PsychoPy experimental info.
+
+    Returns:
+        cortiview_filename (str)
+
+    """
     ses_date, ses_time = expInfo['date'][:-7].split('_')
     ses_date = ses_date.replace('-', '_')
     ses_time = ses_time.replace('h', '')
@@ -140,8 +176,19 @@ def create_cortiview_recording_name(expInfo):
 
     return cortiview_filename
 
-
 def setup_helper_stimuli(win, photo_pos):
+    """
+    Creates PsychoPy.visual objects used during the movie procedure: photodiode communication rectangle and fixation cross.
+
+    Args:
+        win (Window): Window at which stimulus should be presented.
+        photo_pos (tuple): Normalized screen coordinates at which the photodiode communication rectangle will be presented.
+
+    Returns:
+        photo_rect_on (visual.Rect): White rectangle, used as '1' signal for photodiode.
+        photo_rect_off (visual.Rect): Black rectangle, used as '0' signal for photodiode.
+        cross (visual.ShapeStim): Fixation cross.
+    """
 
     # Photodiode rectangle init
     size = 0.1
@@ -163,19 +210,30 @@ def setup_helper_stimuli(win, photo_pos):
     # Cross stimuli init
     cross = visual.ShapeStim(
         win=win,
-        vertices='cross',  # Define shape as a cross
-        size=(2,2),  # Size of the cross (width and height)
-        lineWidth=1,  # Line thickness
-        lineColor='black',  # Line color (white)
-        fillColor='black',  # Fill color (white)
-        units='cm',  # Use normalized units
-        pos=(0, 0)  # Center of the screen
+        vertices='cross',
+        size=(2,2),
+        lineWidth=1,
+        lineColor='black',
+        fillColor='black',
+        units='cm',
+        pos=(0, 0)
         )
     photo_rect_off.draw()
     win.flip()
     return photo_rect_on, photo_rect_off, cross
 
 def setup_free_convo_stimuli(win, photo_pos=(1, 0)):
+    """
+    Creates PsychoPy.visual objects used during the free conversation procedure: photodiode communication rectangle.
+
+    Args:
+        win (Window): Window at which stimulus should be presented.
+        photo_pos (tuple): Normalized screen coordinates at which the photodiode communication rectangle will be presented.
+
+    Returns:
+        photo_rect_on (visual.Rect): White rectangle, used as '1' signal for photodiode.
+        photo_rect_off (visual.Rect): Black rectangle, used as '0' signal for photodiode.
+    """
 
     # Photodiode rectangle init
     size = 0.1
