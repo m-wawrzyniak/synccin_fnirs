@@ -46,8 +46,9 @@ def start_recording(device_ip, rest_port, save_path):
     url = f"http://{device_ip}:{rest_port}/startRecord?filename={save_path}"
     try:
         response = requests.post(url)
+        print(response.status_code)
         if response.status_code == 200:
-            print(f"Recording started at {rest_port}:{save_path}")
+            print(f"Recording started at {device_ip}:{rest_port}")
             return True
         else:
             print(f"Failed to start recording at {device_ip}:{rest_port}: {response.status_code} {response.text}")
@@ -70,6 +71,7 @@ def stop_recording(device_ip, rest_port):
     url = f"http://{device_ip}:{rest_port}/stopRecord"
     try:
         response = requests.post(url)
+        print(response.status_code)
         if response.status_code == 200:
             print(f"Recording stopped at {device_ip}:{rest_port}")
             return True

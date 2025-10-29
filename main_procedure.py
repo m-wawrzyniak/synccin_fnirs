@@ -74,6 +74,7 @@ if start_stage <= 3:
     # 0. Starting fNIRS recording
     comms.start_recording(device_ip= CHILD_IP, rest_port=REST_API_PORT_CHILD,
                           save_path=f'{cortiview_filename}_d_movies')
+    time.sleep(1)
     comms.start_recording(device_ip= CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER,
                           save_path=f'{cortiview_filename}_m_movies')
 
@@ -124,8 +125,11 @@ if start_stage <= 3:
                              duration=10)
 
     # 4. VERBATIM: Ending recording
-    comms.stop_recording(device_ip=CHILD_IP, rest_port=REST_API_PORT_CHILD)
-    comms.stop_recording(device_ip=CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER)
+    for i in range(2):
+        time.sleep(1)
+        comms.stop_recording(device_ip=CHILD_IP, rest_port=REST_API_PORT_CHILD)
+        time.sleep(1)
+        comms.stop_recording(device_ip=CAREGIVER_IP, rest_port=REST_API_PORT_CAREGIVER)
 
 
 ### STAGE 4: FREE CONVERSATIOM
