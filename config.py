@@ -35,9 +35,9 @@ WIN_SIZES[WIN_ID_MAIN] = (2560, 1440)
 
 MOVIES_DIR = "C:/syncc_in/movies_et"
 
-MOVIE_1_PATH = f'{MOVIES_DIR}/norm_mov1.mp4'
-MOVIE_2_PATH = f'{MOVIES_DIR}/norm_mov2.mp4'
-MOVIE_3_PATH = f'{MOVIES_DIR}/norm_mov3.mp4'
+MOVIE_1_PATH = f'{MOVIES_DIR}/norm_mov1.mp4' # BRAVE
+MOVIE_2_PATH = f'{MOVIES_DIR}/norm_mov2.mp4' # PEPPA PIG
+MOVIE_3_PATH = f'{MOVIES_DIR}/norm_mov3.mp4' # THE INCREDIBLES
 
 PHOTO_POS = (1, 0)
 
