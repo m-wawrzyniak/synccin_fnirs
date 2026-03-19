@@ -4,23 +4,35 @@ from collections import defaultdict
 import h5py
 import numpy as np
 import pandas as pd
+import os
+import re
+from collections import defaultdict
 
-def create_meta_df(folder_path, output_path=None):
+
+def create_meta_df(
+    folder_path,
+    output_data_completeness=None,
+    output_data_paths=None
+):
     """
-    Tworzy DataFrame z informacją o dostępności segmentów:
-    movies, fc1, fc2
+    Tworzy dwa DataFrame'y:
 
-    1 -> znaleziono .snirf
-    2 -> znaleziono plik segmentu, ale nie .snirf
-    0 -> brak pliku
+    1) completeness_df
+       1 -> znaleziono .snirf
+       2 -> znaleziono plik segmentu, ale nie .snirf
+       0 -> brak pliku
 
-    Jeśli output_path podane, zapisuje CSV.
+    2) paths_df
+       zawiera ścieżki do .snirf (tam gdzie completeness == 1)
+
+    Oba mogą zostać zapisane opcjonalnie.
     """
 
     dyad_pattern = re.compile(r'w[_]?(\d{3})', re.IGNORECASE)
     segments = ['movies', 'fc1', 'fc2']
 
-    data = defaultdict(lambda: {seg: 0 for seg in segments})
+    completeness = defaultdict(lambda: {seg: 0 for seg in segments})
+    paths = defaultdict(lambda: {seg: None for seg in segments})
 
     for filename in os.listdir(folder_path):
         filepath = os.path.join(folder_path, filename)
@@ -42,25 +54,37 @@ def create_meta_df(folder_path, output_path=None):
                 ext = os.path.splitext(filename)[1].lower()
 
                 if ext == ".snirf":
-                    data[dyad_id][seg] = 1
+                    completeness[dyad_id][seg] = 1
+                    paths[dyad_id][seg] = filepath
                 else:
-                    if data[dyad_id][seg] != 1:
-                        data[dyad_id][seg] = 2
+                    if completeness[dyad_id][seg] != 1:
+                        completeness[dyad_id][seg] = 2
 
-    # konwersja do DataFrame
-    df = pd.DataFrame.from_dict(data, orient='index')
-    df.index.name = "dyad_id"
-    df = df.reset_index()
+    # ---- completeness DF ----
+    completeness_df = pd.DataFrame.from_dict(completeness, orient='index')
+    completeness_df.index.name = "dyad_id"
+    completeness_df = completeness_df.reset_index()
 
-    # sortowanie po numerze diady
-    df["dyad_num"] = df["dyad_id"].str.extract(r'(\d+)').astype(int)
-    df = df.sort_values("dyad_num").drop(columns="dyad_num").reset_index(drop=True)
+    # ---- paths DF ----
+    paths_df = pd.DataFrame.from_dict(paths, orient='index')
+    paths_df.index.name = "dyad_id"
+    paths_df = paths_df.reset_index()
 
-    # opcjonalny zapis
-    if output_path is not None:
-        df.to_csv(output_path, index=False)
+    # sortowanie
+    for df in [completeness_df, paths_df]:
+        df["dyad_num"] = df["dyad_id"].str.extract(r'(\d+)').astype(int)
+        df.sort_values("dyad_num", inplace=True)
+        df.drop(columns="dyad_num", inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
-    return df
+    # zapis opcjonalny
+    if output_data_completeness is not None:
+        completeness_df.to_csv(output_data_completeness, index=False)
+
+    if output_data_paths is not None:
+        paths_df.to_csv(output_data_paths, index=False)
+
+    return completeness_df, paths_df
 
 
 def merge_meta(child_df, caregiver_df, output_path=None):
@@ -312,15 +336,17 @@ def create_movie_order_df(stim_df, output_path=None):
 
     return result_df
 
+ROOT = "/media/mateusz-wawrzyniak/ADATA SE880/DATA/FNIRS/fnirs_data_raw/"
+# ROOT = "F:\DATA\dane_fnirs\"
 
-SNIRF_DIR_CAREGIVER = "F:\DATA\dane_fnirs\matka"
-OUTPUT_FILE_CAREGIVER = "F:\DATA\dane_fnirs\meta_caregiver.csv"
+SNIRF_DIR_CAREGIVER = f"{ROOT}matka"
+OUTPUT_COMP_CAREGIVER = f"{ROOT}meta_comp_caregiver.csv"
 
-SNIRF_DIR_CHILD = "F:\DATA\dane_fnirs\dziecko"
-OUTPUT_FILE_CHILD = "F:\DATA\dane_fnirs\meta_child.csv"
+SNIRF_DIR_CHILD = f"{ROOT}dziecko"
+OUTPUT_COMP_CHILD = f"{ROOT}meta_comp_child.csv"
 
-META_FILE = "F:\DATA\dane_fnirs\meta.csv"
-STIM_TIME_FILE = "F:\DATA\dane_fnirs\stim_time_meta.csv"
+COMP_MERGED = f"{ROOT}meta_comp.csv"
+STIM_TIME_FILE = f"{ROOT}meta_stim_time.csv"
 
 MOVIE_MAP = {
     "1": "Brave",
@@ -328,23 +354,23 @@ MOVIE_MAP = {
     "5": "The Incredibles"
 }
 
-STIM_ORDER_FILE = "F:\DATA\dane_fnirs\stim_order_meta.csv"
+STIM_ORDER_FILE = f"{ROOT}meta_stim_order.csv"
 
 if __name__ == "__main__":
-    cgs_df = create_meta_df(
+    cgs_df, _ = create_meta_df(
         folder_path=SNIRF_DIR_CAREGIVER,
-        output_path=None#OUTPUT_FILE_CAREGIVER
+        output_data_completeness=None#OUTPUT_COMP_CAREGIVER
     )
 
-    cls_df = create_meta_df(
+    cls_df, _ = create_meta_df(
         folder_path=SNIRF_DIR_CHILD,
-        output_path=None#OUTPUT_FILE_CHILD
+        output_data_completeness=None#OUTPUT_COMP_CHILD
     )
 
     merge_df = merge_meta(
         caregiver_df=cgs_df,
         child_df=cls_df,
-        output_path=META_FILE
+        output_path=COMP_MERGED
     )
 
     stim_time_df = extract_movies_stim_info(
