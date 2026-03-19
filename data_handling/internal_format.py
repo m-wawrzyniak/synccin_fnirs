@@ -2,18 +2,9 @@ import os
 import shutil
 import pandas as pd
 
-from mov_time_order import create_meta_df
+from snirf_handling import create_meta_df
 
-ROOT = "/media/mateusz-wawrzyniak/ADATA SE880/DATA/FNIRS/fnirs_data_raw/"
-# ROOT = "F:\DATA\dane_fnirs\"
-
-SNIRF_DIR_CAREGIVER = f"{ROOT}matka"
-SNIRF_DIR_CHILD = f"{ROOT}dziecko"
-
-OUTPUT_PATHS_CAREGIVER =  f"{ROOT}meta_paths_caregiver.csv"
-OUTPUT_PATHS_CHILD =  f"{ROOT}meta_paths_child.csv"
-
-OUTPUT_INTERNAL_DB = "/media/mateusz-wawrzyniak/ADATA SE880/DATA/FNIRS/fnirs_data_internal_format/"
+import config_handling as conf
 
 def create_internal_db_format(paths_df_child, paths_df_care, output_db_dir):
     """
@@ -70,17 +61,17 @@ def create_internal_db_format(paths_df_child, paths_df_care, output_db_dir):
 
 if __name__ == "__main__":
     _, cgs_df = create_meta_df(
-        folder_path=SNIRF_DIR_CAREGIVER,
-        output_data_paths=OUTPUT_PATHS_CAREGIVER
+        folder_path=conf.SNIRF_DIR_CAREGIVER,
+        output_data_paths=conf.OUTPUT_PATHS_CAREGIVER
     )
 
     _, cls_df = create_meta_df(
-        folder_path=SNIRF_DIR_CHILD,
-        output_data_paths=OUTPUT_PATHS_CHILD
+        folder_path=conf.SNIRF_DIR_CHILD,
+        output_data_paths=conf.OUTPUT_PATHS_CHILD
     )
 
     create_internal_db_format(
         paths_df_child=cls_df,
         paths_df_care=cgs_df,
-        output_db_dir=OUTPUT_INTERNAL_DB
+        output_db_dir=conf.OUTPUT_INTERNAL_DB
     )

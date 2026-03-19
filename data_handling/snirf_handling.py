@@ -1,12 +1,11 @@
-import os
-import re
-from collections import defaultdict
 import h5py
 import numpy as np
 import pandas as pd
 import os
 import re
 from collections import defaultdict
+
+import config_handling as conf
 
 
 def create_meta_df(
@@ -307,7 +306,7 @@ def create_movie_order_df(stim_df, output_path=None):
         # sortowanie po czasie
         times_sorted = sorted(times, key=lambda x: x[1])
 
-        ordered_movies = [MOVIE_MAP[t[0]] for t in times_sorted]
+        ordered_movies = [conf.MOVIE_MAP[t[0]] for t in times_sorted]
 
         # upewniamy się, że zawsze mamy 3 kolumny
         while len(ordered_movies) < 3:
@@ -336,52 +335,35 @@ def create_movie_order_df(stim_df, output_path=None):
 
     return result_df
 
-ROOT = "/media/mateusz-wawrzyniak/ADATA SE880/DATA/FNIRS/fnirs_data_raw/"
-# ROOT = "F:\DATA\dane_fnirs\"
-
-SNIRF_DIR_CAREGIVER = f"{ROOT}matka"
-OUTPUT_COMP_CAREGIVER = f"{ROOT}meta_comp_caregiver.csv"
-
-SNIRF_DIR_CHILD = f"{ROOT}dziecko"
-OUTPUT_COMP_CHILD = f"{ROOT}meta_comp_child.csv"
-
-COMP_MERGED = f"{ROOT}meta_comp.csv"
-STIM_TIME_FILE = f"{ROOT}meta_stim_time.csv"
-
-MOVIE_MAP = {
-    "1": "Brave",
-    "3": "Peppa Pig",
-    "5": "The Incredibles"
-}
-
-STIM_ORDER_FILE = f"{ROOT}meta_stim_order.csv"
 
 if __name__ == "__main__":
     cgs_df, _ = create_meta_df(
-        folder_path=SNIRF_DIR_CAREGIVER,
-        output_data_completeness=None#OUTPUT_COMP_CAREGIVER
+        folder_path=conf.SNIRF_DIR_CAREGIVER,
+        output_data_completeness=None,#conf.OUTPUT_COMP_CAREGIVER
+        output_data_paths=conf.OUTPUT_PATHS_CAREGIVER
     )
 
     cls_df, _ = create_meta_df(
-        folder_path=SNIRF_DIR_CHILD,
-        output_data_completeness=None#OUTPUT_COMP_CHILD
+        folder_path=conf.SNIRF_DIR_CHILD,
+        output_data_completeness=None,#conf.OUTPUT_COMP_CHILD
+        output_data_paths=conf.OUTPUT_PATHS_CHILD
     )
 
     merge_df = merge_meta(
         caregiver_df=cgs_df,
         child_df=cls_df,
-        output_path=COMP_MERGED
+        output_path=conf.COMP_MERGED
     )
 
     stim_time_df = extract_movies_stim_info(
         meta_df=merge_df,
-        snirf_dir_child=SNIRF_DIR_CHILD,
-        snirf_dir_caregiver=SNIRF_DIR_CAREGIVER,
-        output_path=STIM_TIME_FILE
+        snirf_dir_child=conf.SNIRF_DIR_CHILD,
+        snirf_dir_caregiver=conf.SNIRF_DIR_CAREGIVER,
+        output_path=conf.STIM_TIME_FILE
     )
 
     create_movie_order_df(
         stim_df=stim_time_df,
-        output_path=STIM_ORDER_FILE
+        output_path=conf.STIM_ORDER_FILE
     )
 
