@@ -28,6 +28,25 @@ OUTPUT_PATHS_CHILD =  f"{ROOT_RAW}meta_paths_child.csv"
 OUTPUT_INTERNAL_DB = f"{ROOT}fnirs_data_internal_format//"
 
 # EXTERNAL DB
+'''
+data/ UNIWAW_imported/ <MODALITY>/ <DYAD_ID>/ <member_folder>/
+data/UNIWAW_imported/EEG/W_030/child/W_030_EEG_ch_Peppa.nc
+
+https://github.com/SYNCC-IN/hyperscanning-signal-analysis/blob/main/docs/export_ncdf_guide.md
+
+additional metadata abt the experiment and not the registration itself.
+
+TODO: 2-sec pre-stim and post-stim
+TODO: check if you got 2-sec post-stim for the last mov
+t=0 at is at the first stim
+
+
+TODO: remind Andrea to provide the scripts AT MONDAY, check on GitLab
+TODO: remind Agnieszka when you are going to to QC and preproc
+
+https://gitlab.com/a.bizzego/synccin
+
+'''
 EXTERNAL_STRUCTURE = {
     "root": {
         "format": lambda d_id: f"{ROOT}fnirs_data_external_format//",
