@@ -39,6 +39,7 @@ TODO: remind Agnieszka when you are going to to QC and preproc
 https://gitlab.com/a.bizzego/synccin
 
 '''
+
 EXTERNAL_STRUCTURE = {
     "root": {
         "format": lambda d_id: f"{ROOT}UNIWAW_imported//",
@@ -74,6 +75,80 @@ EXTERNAL_STRUCTURE = {
                 }
             }
         }
+    }
+}
+
+SNIRF_BASE_STRUCTURE = {
+    'formatVersion': 'str',
+    'nirs': {
+        "aux1": {
+            'dataTimeSeries': 'array',
+            'name': 'str',
+            'time': 'array'
+        },
+        "aux2": {
+            'dataTimeSeries': 'array',
+            'name': 'str',
+            'time': 'array'
+        },
+        "aux3": {
+            'dataTimeSeries': 'array',
+            'name': 'str',
+            'time': 'array'
+        },
+        "aux4": {
+            'dataTimeSeries': 'array',
+            'name': 'str',
+            'time': 'array'
+        },
+        "aux5": {
+            'dataTimeSeries': 'array',
+            'name': 'str',
+            'time': 'array'
+        },
+        "aux6": {
+            'dataTimeSeries': 'array',
+            'name': 'str',
+            'time': 'array'
+        },
+        "data1": {
+            'dataTimeSeries': 'array',
+            'measurementList_': 'dict',
+            'time': 'array'
+        },
+        "metaDataTags": {
+            'device_timestamp': 'array',
+            'first_timestamp': 'float',
+            'missing_sample': 'array',
+            'sample_index': 'array',
+            'other_': 'other'
+        },
+        "probe": 'dict',
+        "stim1": {
+            'data': 'array',
+            'name': 'str'
+        },
+        "stim2": {
+            'data': 'array',
+            'name': 'str'
+        },
+        "stim3": {
+            'data': 'array',
+            'name': 'str'
+        },
+        "stim4": {
+            'data': 'array',
+            'name': 'str'
+        },
+        "stim5": {
+            'data': 'array',
+            'name': 'str'
+        },
+        "stim6": {
+            'data': 'array',
+            'name': 'str'
+        },
+
     }
 }
 

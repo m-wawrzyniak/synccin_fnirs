@@ -314,16 +314,16 @@ def _safe_write_dataset(group, key, value):
 
 
 def _cut_movies(
-    snirf_path,
-    stim_times,
-    dyad_id,
-    is_child,
-    external_structure,
-    snirf_goal_structure
+        snirf_path,
+        stim_times,
+        dyad_id,
+        is_child,
+        external_structure,
+        snirf_goal_structure
 ):
     """
-    Cuts SNIRF into 3 movie files according to stim_times
-    and saves using EXTERNAL_STRUCTURE.
+    Cuts SNIRF into 3 movie files, rebases time, and maps
+    segment-specific triggers to stim1 and stim2.
     """
 
     paths = _resolve_path(
@@ -335,30 +335,22 @@ def _cut_movies(
     base_path = paths["full_dir"]
     os.makedirs(base_path, exist_ok=True)
 
-    # =========================================================
-    # LOAD SNIRF
-    # =========================================================
     with h5py.File(snirf_path, "r") as f:
         snirf_dict = snirf.h5_to_dict(f)
 
     nirs = snirf_dict.get("nirs", {})
 
-    # =========================================================
-    # STIM SEGMENTS
-    # =========================================================
+    # Mapping segments to their source trigger indices
+    # e.g., Peppa (stim_key "3") uses stim3 for start and stim4 for end
     segments = {
-        "1": (stim_times[0], stim_times[1]),
-        "3": (stim_times[2], stim_times[3]),
-        "5": (stim_times[4], stim_times[5]),
+        "1": (stim_times[0], stim_times[1]),  # Brave
+        "3": (stim_times[2], stim_times[3]),  # Peppa
+        "5": (stim_times[4], stim_times[5]),  # Incredibles
     }
 
     _check_overlap(segments)
 
-    # =========================================================
-    # PROCESS EACH MOVIE
-    # =========================================================
     for stim_key, (t_start, t_end) in segments.items():
-
         movie_key = conf.MOVIE_MAP[stim_key]
         paths = _resolve_path(
             dyad_id,
@@ -368,128 +360,87 @@ def _cut_movies(
         )
         output_path = paths["file_path"]
 
-        # -----------------------------------------------------
-        # REFERENCE TIME (GLOBAL INDICES)
-        # -----------------------------------------------------
+        # Reference time for indexing
         ref_container = nirs.get("data1")
-
         if ref_container is None or "time" not in ref_container:
             print(f"[WARN] {dyad_id} {movie_key}: missing reference time")
             continue
 
         ref_time = ref_container["time"]
-
-        _, ref_indices = _adjust_time(
-            ref_time,
-            t_start,
-            t_end,
-            padding=conf.PADDING
-        )
+        _, ref_indices = _adjust_time(ref_time, t_start, t_end, padding=conf.PADDING)
 
         if ref_indices is None:
             print(f"[WARN] {dyad_id} {movie_key}: empty segment")
             continue
 
-
-        # =====================================================
-        # WRITE OUTPUT SNIRF
-        # =====================================================
         with h5py.File(output_path, "w") as out_f:
-
             nirs_grp = out_f.create_group("nirs")
             written_any = False
 
+            # 1. PROCESS STANDARD CONTAINERS (Data, Aux, Meta, Probe)
             for container_name, keep in snirf_goal_structure.items():
-
                 if not keep or container_name not in nirs:
                     continue
 
-                container = nirs[container_name]
-
-                # =================================================
-                # META DATA TAGS
-                # =================================================
+                # Metadata logic
                 if container_name == "metaDataTags":
-
                     grp = nirs_grp.create_group("metaDataTags")
-
-                    adjusted_meta = _adjust_metaDataTags(
-                        container,
-                        ref_indices,
-                        t_start
-                    )
-
-                    if adjusted_meta is None:
-                        continue
-
-                    for key, value in container.items():
-
-                        if key in adjusted_meta:
-                            _safe_write_dataset(grp, key, adjusted_meta[key])
-                        else:
-                            _safe_write_dataset(grp, key, value)
-
+                    adj_meta = _adjust_metaDataTags(nirs[container_name], ref_indices, t_start)
+                    for k, v in nirs[container_name].items():
+                        _safe_write_dataset(grp, k, adj_meta[k] if k in adj_meta else v)
                     written_any = True
                     continue
 
-                # =================================================
-                # TIME-BASED CONTAINERS
-                # =================================================
+                # Time-based containers (data1, aux1-6)
+                container = nirs[container_name]
                 if isinstance(container, dict) and "time" in container:
-
-                    time = container["time"]
-
-                    if len(time) <= max(ref_indices):
-                        print(f"[WARN] {dyad_id} {movie_key} {container_name}: index out of bounds")
-                        continue
-
-                    # 🔥 CRITICAL: align to stimulus onset
-                    new_time = time[ref_indices] - t_start
-
                     grp = nirs_grp.create_group(container_name)
+                    new_time = container["time"][ref_indices] - t_start
 
-                    for key, value in container.items():
-
-                        # ---- TIME ----
-                        if key == "time":
+                    for k, v in container.items():
+                        if k == "time":
                             grp.create_dataset("time", data=new_time)
-
-                        # ---- SIGNAL ----
-                        elif key == "dataTimeSeries":
-
-                            if len(value) != len(time):
-                                print(f"[WARN] length mismatch in {container_name}")
-                                continue
-
-                            new_data = _adjust_dataTimeSeries(value, ref_indices)
+                        elif k == "dataTimeSeries":
+                            new_data = _adjust_dataTimeSeries(v, ref_indices)
                             grp.create_dataset("dataTimeSeries", data=new_data)
-
-                        # ---- EVERYTHING ELSE ----
                         else:
-                            _safe_write_dataset(grp, key, value)
-
+                            _safe_write_dataset(grp, k, v)
                     written_any = True
                     continue
 
-                # =================================================
-                # NON-TIME CONTAINERS (PURE COPY)
-                # =================================================
+                # Probe/Static copy
                 grp = nirs_grp.create_group(container_name)
-
-                if isinstance(container, dict):
-                    for key, value in container.items():
-                        _safe_write_dataset(grp, key, value)
-                else:
-                    _safe_write_dataset(grp, "value", container)
-
+                for k, v in container.items():
+                    _safe_write_dataset(grp, k, v)
                 written_any = True
 
+            # 2. PROCESS STIMULUS RE-MAPPING
+            # Maps stim[N] -> stim1 and stim[N+1] -> stim2
+            start_idx = int(stim_key)
+            stim_map = {
+                f"stim{start_idx}": "stim1",
+                f"stim{start_idx + 1}": "stim2"
+            }
 
-        # =====================================================
-        # FINAL CHECK
-        # =====================================================
+            for src_key, target_key in stim_map.items():
+                if src_key in nirs:
+                    s_grp = nirs_grp.create_group(target_key)
+                    src_data = nirs[src_key]
+
+                    if "data" in src_data:
+                        # Re-base trigger time: t_new = t_old - t_start
+                        raw_data = np.array(src_data["data"])
+                        if raw_data.ndim == 1:
+                            raw_data = raw_data.reshape(1, -1)
+
+                        # Apply time shift to the first column [0]
+                        raw_data[:, 0] = raw_data[:, 0] - t_start
+                        s_grp.create_dataset("data", data=raw_data)
+
+                    if "name" in src_data:
+                        _safe_write_dataset(s_grp, "name", src_data["name"])
+
         if not written_any:
-            print(f"[WARN] Removing empty file: {output_path}")
             os.remove(output_path)
         else:
             print(f"Saved: {output_path}")
@@ -498,16 +449,12 @@ def _cut_movies(
 def cut_all_movies(
         paths_children=conf.OUTPUT_PATHS_CHILD,
         paths_caregivers=conf.OUTPUT_PATHS_CAREGIVER,
-        stim_times=conf.STIM_TIME_FILE,
+        stim_df_input=None,  # New parameter
         external_structure=conf.EXTERNAL_STRUCTURE,
         snirf_goal_structure=conf.SNIRF_GOAL_STRUCTURE
 ):
-
-    # -------------------------------------------------
-    # load stim times
-    # -------------------------------------------------
-    stim_df = pd.read_csv(stim_times, sep=None, engine="python")
-    stim_df = stim_df.set_index("dyad_id")
+    # Use the passed DF, or fall back to reading the file if None
+    stim_df = stim_df_input.set_index("dyad_id")
 
     # -------------------------------------------------
     # helper: process one table (children/caregivers)
@@ -612,4 +559,15 @@ if __name__ == "__main__":
         external_structure=conf.EXTERNAL_STRUCTURE
     )
 
-    cut_all_movies()
+    cgs_df, _ = snirf.create_meta_df(conf.SNIRF_DIR_CAREGIVER)
+    cls_df, _ = snirf.create_meta_df(conf.SNIRF_DIR_CHILD)
+
+    merge_df = snirf.merge_meta(caregiver_df=cgs_df, child_df=cls_df)
+
+    stim_time_df = snirf.extract_movies_stim_info(
+        meta_df=merge_df,
+        snirf_dir_child=conf.SNIRF_DIR_CHILD,
+        snirf_dir_caregiver=conf.SNIRF_DIR_CAREGIVER
+    )
+
+    cut_all_movies(stim_df_input=stim_time_df)
