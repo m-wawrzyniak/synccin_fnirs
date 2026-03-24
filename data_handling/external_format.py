@@ -7,6 +7,79 @@ import shutil
 import snirf_handling as snirf
 import config_handling as conf
 
+def _resolve_path(dyad_id, external_structure, role=None, file_key=None):
+    """
+    Resolves paths from EXTERNAL_STRUCTURE.
+
+    Returns:
+        dict with:
+            root
+            modality
+            dyad
+            role (optional)
+            full_dir (deepest directory)
+            file_path (optional)
+    """
+
+    root_struct = external_structure["root"]
+    modality_struct = root_struct["modality"]
+    dyad_struct = modality_struct["dyad"]
+
+    # -------------------------
+    # BASE PATHS
+    # -------------------------
+    root_path = root_struct["format"](dyad_id)
+
+    modality_path = os.path.join(
+        root_path,
+        modality_struct["format"](dyad_id)
+    )
+
+    dyad_path = os.path.join(
+        modality_path,
+        dyad_struct["format"](dyad_id)
+    )
+
+    result = {
+        "root": root_path,
+        "modality": modality_path,
+        "dyad": dyad_path
+    }
+
+    # -------------------------
+    # ROLE (child / caregiver)
+    # -------------------------
+    if role is not None:
+
+        role_key = f"{role}_dir"
+        role_struct = dyad_struct[role_key]
+
+        role_path = os.path.join(
+            dyad_path,
+            role_struct["format"](dyad_id)
+        )
+
+        result["role"] = role_path
+        result["full_dir"] = role_path
+
+        # -------------------------
+        # FILE
+        # -------------------------
+        if file_key is not None:
+
+            if file_key not in role_struct:
+                raise ValueError(f"{file_key} not found in {role_key}")
+
+            filename = role_struct[file_key]["format"](dyad_id)
+
+            result["file_path"] = os.path.join(role_path, filename)
+
+    else:
+        result["full_dir"] = dyad_path
+
+    return result
+
+
 def create_struct_skeleton(comp_merged, external_structure):
     """
     Creates directory structure based on EXTERNAL_STRUCTURE config.
@@ -19,62 +92,131 @@ def create_struct_skeleton(comp_merged, external_structure):
     :param external_structure: config dict
     """
     comp_merged = pd.read_csv(comp_merged)
-    root_format = external_structure["root"]["format"]
-    dyad_struct = external_structure["root"]["dyad"]
 
     for dyad_id in comp_merged["dyad_id"].unique():
-
-        # --- ROOT ---
-        root_path = root_format(dyad_id)
-
-        # --- DYAD ---
-        dyad_path = os.path.join(
-            root_path,
-            dyad_struct["format"](dyad_id)
+        paths = _resolve_path(
+            dyad_id,
+            external_structure,
+            role="child"
         )
+        os.makedirs(paths["full_dir"], exist_ok=True)
 
-        # --- MODALITY ---
-        modality_struct = dyad_struct["modality"]
-        modality_path = os.path.join(
-            dyad_path,
-            modality_struct["format"](dyad_id)
+        paths = _resolve_path(
+            dyad_id,
+            external_structure,
+            role="caregiver"
         )
-
-        # --- CHILD DIR ---
-        child_struct = modality_struct["child_dir"]
-        child_path = os.path.join(
-            modality_path,
-            child_struct["format"](dyad_id)
-        )
-
-        # --- CAREGIVER DIR ---
-        care_struct = modality_struct["caregiver_dir"]
-        care_path = os.path.join(
-            modality_path,
-            care_struct["format"](dyad_id)
-        )
-
-        # create directories
-        os.makedirs(child_path, exist_ok=True)
-        os.makedirs(care_path, exist_ok=True)
+        os.makedirs(paths["full_dir"], exist_ok=True)
 
     print("Structure skeleton created successfully.")
 
 
-def _adjust_time(time_array, t_start, t_end):
+def inspect_padding_availability(
+    paths_children,
+    paths_caregivers,
+    stim_times_path
+):
+    """
+    Computes how much data exists:
+    - before FIRST presented movie
+    - after LAST presented movie
+
+    (respects randomized order of movies)
+    """
+
+    stim_df = pd.read_csv(stim_times_path, sep=None, engine="python")
+    stim_df = stim_df.set_index("dyad_id")
+
+    def process(df_path, role_name):
+
+        df = pd.read_csv(df_path, sep=None, engine="python")
+
+        print(f"\n===== {role_name.upper()} =====")
+
+        for _, row in df.iterrows():
+            dyad_id = row["dyad_id"]
+
+            if dyad_id not in stim_df.index:
+                print(f"[WARN] missing stim for {dyad_id}")
+                continue
+
+            snirf_path = row.get("movies", None)
+
+            if not isinstance(snirf_path, str) or not os.path.exists(snirf_path):
+                print(f"[WARN] missing SNIRF for {dyad_id}")
+                continue
+
+            # -------------------------
+            # LOAD TIME
+            # -------------------------
+            with h5py.File(snirf_path, "r") as f:
+                snirf_dict = snirf.h5_to_dict(f)
+
+            nirs = snirf_dict.get("nirs", {})
+            data1 = nirs.get("data1", {})
+
+            if "time" not in data1:
+                print(f"[WARN] no time in {dyad_id}")
+                continue
+
+            time = data1["time"]
+            t_min = np.min(time)
+            t_max = np.max(time)
+
+            # -------------------------
+            # STIM SEGMENTS (UNORDERED)
+            # -------------------------
+            stim_row = stim_df.loc[dyad_id]
+
+            segments = [
+                (stim_row["1"], stim_row["2"], "seg1"),
+                (stim_row["3"], stim_row["4"], "seg2"),
+                (stim_row["5"], stim_row["6"], "seg3"),
+            ]
+
+            # -------------------------
+            # SORT BY ACTUAL TIME
+            # -------------------------
+            segments_sorted = sorted(segments, key=lambda x: x[0])
+
+            first_start = segments_sorted[0][0]
+            last_end = segments_sorted[-1][1]
+
+            # -------------------------
+            # COMPUTE BUFFERS
+            # -------------------------
+            before = first_start - t_min
+            after = t_max - last_end
+
+            print(
+                f"{dyad_id} | "
+                f"before: {before:.2f}s | "
+                f"after: {after:.2f}s"
+            )
+
+    process(paths_children, "child")
+    process(paths_caregivers, "caregiver")
+
+
+def _adjust_time(time_array, t_start, t_end, padding=0.0):
     """
     Returns:
-    - adjusted time (rebased)
+    - adjusted time (rebased so that t_start → 0)
     - indices to keep
     """
-    mask = (time_array >= t_start) & (time_array <= t_end)
+
+    t_min = t_start - padding
+    t_max = t_end + padding
+
+    mask = (time_array >= t_min) & (time_array <= t_max)
 
     if not np.any(mask):
         return None, None
 
     indices = np.where(mask)[0]
+
     new_time = time_array[indices]
-    new_time = new_time - new_time[0]
+    new_time = new_time - t_start
 
     return new_time, indices
 
@@ -89,48 +231,36 @@ def _adjust_dataTimeSeries(data, indices):
     return data[indices]
 
 
-def _adjust_metaDataTags(meta, indices, original_time):
+def _adjust_metaDataTags(meta, indices, t_start):
     """
-    Adjusts metaDataTags according to kept indices.
-
-    Rules:
-    - missing_sample → subset
-    - sample_index → subset
-    - device_timestamp → subset (no offset)
-    - first_timestamp → subtract time_offset
+    Adjusts metadata according to selected indices and time rebasing.
     """
-
-    if meta is None or indices is None:
-        return None
 
     adjusted = {}
 
-    # compute offset from ORIGINAL time
-    time_offset = original_time[indices][0]
-
-    # --- missing_sample ---
+    # -------------------------
+    # missing_sample
+    # -------------------------
     if "missing_sample" in meta:
-        arr = meta["missing_sample"]
-        if isinstance(arr, np.ndarray) and len(arr) >= np.max(indices) + 1:
-            adjusted["missing_sample"] = arr[indices]
+        adjusted["missing_sample"] = meta["missing_sample"][indices]
 
-    # --- sample_index ---
+    # -------------------------
+    # sample_index (relative to hardware → just slice)
+    # -------------------------
     if "sample_index" in meta:
-        arr = meta["sample_index"]
-        if isinstance(arr, np.ndarray) and len(arr) >= np.max(indices) + 1:
-            adjusted["sample_index"] = arr[indices]
+        adjusted["sample_index"] = meta["sample_index"][indices]
 
-    # --- device_timestamp ---
+    # -------------------------
+    # device_timestamp (NO OFFSET, only slice)
+    # -------------------------
     if "device_timestamp" in meta:
-        arr = meta["device_timestamp"]
-        if isinstance(arr, np.ndarray) and len(arr) >= np.max(indices) + 1:
-            adjusted["device_timestamp"] = arr[indices]
+        adjusted["device_timestamp"] = meta["device_timestamp"][indices]
 
-    # --- first_timestamp ---
+    # -------------------------
+    # first_timestamp (OFFSET LIKE TIME)
+    # -------------------------
     if "first_timestamp" in meta:
-        val = meta["first_timestamp"]
-        if isinstance(val, (float, np.floating)):
-            adjusted["first_timestamp"] = val + time_offset
+        adjusted["first_timestamp"] = meta["first_timestamp"] - t_start
 
     return adjusted
 
@@ -196,25 +326,26 @@ def _cut_movies(
     and saves using EXTERNAL_STRUCTURE.
     """
 
-    role_key = "child_dir" if is_child else "caregiver_dir"
+    paths = _resolve_path(
+        dyad_id,
+        external_structure,
+        role="child" if is_child else "caregiver"
+    )
 
-    # --- resolve base output paths ---
-    root = external_structure["root"]["format"](dyad_id)
-    dyad = external_structure["root"]["dyad"]["format"](dyad_id)
-    modality = external_structure["root"]["dyad"]["modality"]["format"](dyad_id)
-
-    role_struct = external_structure["root"]["dyad"]["modality"][role_key]
-    role_dir = role_struct["format"](dyad_id)
-
-    base_path = os.path.join(root, dyad, modality, role_dir)
-
+    base_path = paths["full_dir"]
     os.makedirs(base_path, exist_ok=True)
 
+    # =========================================================
+    # LOAD SNIRF
+    # =========================================================
     with h5py.File(snirf_path, "r") as f:
         snirf_dict = snirf.h5_to_dict(f)
 
     nirs = snirf_dict.get("nirs", {})
 
+    # =========================================================
+    # STIM SEGMENTS
+    # =========================================================
     segments = {
         "1": (stim_times[0], stim_times[1]),
         "3": (stim_times[2], stim_times[3]),
@@ -223,12 +354,23 @@ def _cut_movies(
 
     _check_overlap(segments)
 
+    # =========================================================
+    # PROCESS EACH MOVIE
+    # =========================================================
     for stim_key, (t_start, t_end) in segments.items():
 
         movie_key = conf.MOVIE_MAP[stim_key]
-        filename = role_struct[movie_key]["format"](dyad_id)
-        output_path = os.path.join(base_path, filename)
+        paths = _resolve_path(
+            dyad_id,
+            external_structure,
+            role="child" if is_child else "caregiver",
+            file_key=movie_key
+        )
+        output_path = paths["file_path"]
 
+        # -----------------------------------------------------
+        # REFERENCE TIME (GLOBAL INDICES)
+        # -----------------------------------------------------
         ref_container = nirs.get("data1")
 
         if ref_container is None or "time" not in ref_container:
@@ -236,13 +378,24 @@ def _cut_movies(
             continue
 
         ref_time = ref_container["time"]
-        _, ref_indices = _adjust_time(ref_time, t_start, t_end)
+
+        _, ref_indices = _adjust_time(
+            ref_time,
+            t_start,
+            t_end,
+            padding=conf.PADDING
+        )
 
         if ref_indices is None:
-            print(f"[WARN] {dyad_id} {movie_key}: empty segment (reference)")
+            print(f"[WARN] {dyad_id} {movie_key}: empty segment")
             continue
 
+
+        # =====================================================
+        # WRITE OUTPUT SNIRF
+        # =====================================================
         with h5py.File(output_path, "w") as out_f:
+
             nirs_grp = out_f.create_group("nirs")
             written_any = False
 
@@ -253,9 +406,9 @@ def _cut_movies(
 
                 container = nirs[container_name]
 
-                # =========================================================
-                # META DATA TAGS (special handling)
-                # =========================================================
+                # =================================================
+                # META DATA TAGS
+                # =================================================
                 if container_name == "metaDataTags":
 
                     grp = nirs_grp.create_group("metaDataTags")
@@ -263,7 +416,7 @@ def _cut_movies(
                     adjusted_meta = _adjust_metaDataTags(
                         container,
                         ref_indices,
-                        ref_time
+                        t_start
                     )
 
                     if adjusted_meta is None:
@@ -271,24 +424,17 @@ def _cut_movies(
 
                     for key, value in container.items():
 
-                        # ----------------------------------------
-                        # if adjusted version exists → use it
-                        # ----------------------------------------
                         if key in adjusted_meta:
                             _safe_write_dataset(grp, key, adjusted_meta[key])
-
-                        # ----------------------------------------
-                        # otherwise copy original unchanged
-                        # ----------------------------------------
                         else:
                             _safe_write_dataset(grp, key, value)
 
                     written_any = True
                     continue
 
-                # =========================================================
+                # =================================================
                 # TIME-BASED CONTAINERS
-                # =========================================================
+                # =================================================
                 if isinstance(container, dict) and "time" in container:
 
                     time = container["time"]
@@ -297,18 +443,18 @@ def _cut_movies(
                         print(f"[WARN] {dyad_id} {movie_key} {container_name}: index out of bounds")
                         continue
 
-                    new_time = time[ref_indices]
-                    new_time = new_time - new_time[0]
+                    # 🔥 CRITICAL: align to stimulus onset
+                    new_time = time[ref_indices] - t_start
 
                     grp = nirs_grp.create_group(container_name)
 
                     for key, value in container.items():
 
-                        # ---- time ----
+                        # ---- TIME ----
                         if key == "time":
                             grp.create_dataset("time", data=new_time)
 
-                        # ---- dataTimeSeries ----
+                        # ---- SIGNAL ----
                         elif key == "dataTimeSeries":
 
                             if len(value) != len(time):
@@ -318,16 +464,16 @@ def _cut_movies(
                             new_data = _adjust_dataTimeSeries(value, ref_indices)
                             grp.create_dataset("dataTimeSeries", data=new_data)
 
-                        # ---- EVERYTHING ELSE (unaltered but safe) ----
+                        # ---- EVERYTHING ELSE ----
                         else:
                             _safe_write_dataset(grp, key, value)
 
                     written_any = True
                     continue
 
-                # =========================================================
-                # NON-TIME CONTAINERS (PURE COPY, SAFE ONLY)
-                # =========================================================
+                # =================================================
+                # NON-TIME CONTAINERS (PURE COPY)
+                # =================================================
                 grp = nirs_grp.create_group(container_name)
 
                 if isinstance(container, dict):
@@ -338,15 +484,15 @@ def _cut_movies(
 
                 written_any = True
 
-        # =========================================================
+
+        # =====================================================
         # FINAL CHECK
-        # =========================================================
+        # =====================================================
         if not written_any:
             print(f"[WARN] Removing empty file: {output_path}")
             os.remove(output_path)
         else:
             print(f"Saved: {output_path}")
-
 
 
 def cut_all_movies(
@@ -419,14 +565,12 @@ def cut_all_movies(
             # -------------------------------------------------
             # 2. COPY FC1 / FC2 WHOLE FILES
             # -------------------------------------------------
-            role_key = "child_dir" if is_child else "caregiver_dir"
-
-            role_struct = external_structure["root"]["dyad"]["modality"][role_key]
-            base_root = external_structure["root"]["format"](dyad_id)
-            dyad_dir = external_structure["root"]["dyad"]["format"](dyad_id)
-            modality = external_structure["root"]["dyad"]["modality"]["format"](dyad_id)
-
-            base_path = os.path.join(base_root, dyad_dir, modality, role_struct["format"](dyad_id))
+            paths = _resolve_path(
+                dyad_id,
+                external_structure,
+                role="child" if is_child else "caregiver"
+            )
+            base_path = paths["full_dir"]
 
             for fc_key in ["fc1", "fc2"]:
 
@@ -435,8 +579,14 @@ def cut_all_movies(
                 if not isinstance(fc_path, str) or not os.path.exists(fc_path):
                     continue
 
-                filename = role_struct[fc_key]["format"](dyad_id)
-                out_path = os.path.join(base_path, filename)
+                paths = _resolve_path(
+                    dyad_id,
+                    external_structure,
+                    role="child" if is_child else "caregiver",
+                    file_key=fc_key
+                )
+
+                out_path = paths["file_path"]
 
                 os.makedirs(base_path, exist_ok=True)
 
@@ -450,6 +600,13 @@ def cut_all_movies(
     process_table(paths_caregivers, is_child=False)
 
 if __name__ == "__main__":
+    """
+    inspect_padding_availability(
+        paths_children=conf.OUTPUT_PATHS_CHILD,
+        paths_caregivers=conf.OUTPUT_PATHS_CAREGIVER,
+        stim_times_path=conf.STIM_TIME_FILE
+    )
+    """
     create_struct_skeleton(
         comp_merged=conf.COMP_MERGED,
         external_structure=conf.EXTERNAL_STRUCTURE

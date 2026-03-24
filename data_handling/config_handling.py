@@ -29,56 +29,48 @@ OUTPUT_INTERNAL_DB = f"{ROOT}fnirs_data_internal_format//"
 
 # EXTERNAL DB
 '''
-data/ UNIWAW_imported/ <MODALITY>/ <DYAD_ID>/ <member_folder>/
-data/UNIWAW_imported/EEG/W_030/child/W_030_EEG_ch_Peppa.nc
-
 https://github.com/SYNCC-IN/hyperscanning-signal-analysis/blob/main/docs/export_ncdf_guide.md
-
-additional metadata abt the experiment and not the registration itself.
-
-TODO: 2-sec pre-stim and post-stim
-TODO: check if you got 2-sec post-stim for the last mov
-t=0 at is at the first stim
-
 
 TODO: remind Andrea to provide the scripts AT MONDAY, check on GitLab
 TODO: remind Agnieszka when you are going to to QC and preproc
+
+!!! TODO: Didnt copy stim1 containers
 
 https://gitlab.com/a.bizzego/synccin
 
 '''
 EXTERNAL_STRUCTURE = {
     "root": {
-        "format": lambda d_id: f"{ROOT}fnirs_data_external_format//",
-        "dyad": {
-            "format": lambda d_id: f"{d_id}",
-            "modality": {
-                "format": lambda d_id: "fnirs",
+        "format": lambda d_id: f"{ROOT}UNIWAW_imported//",
+        "modality": {
+            "format": lambda d_id: "FNIRS",
+            "dyad": {
+                "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}",
                 "child_dir":{
-                    "format": lambda d_id: f"{d_id}_child",
+                    "format": lambda d_id: f"child",
                     "movie_brave": {
-                        "format": lambda d_id: f"{d_id}_child_Brave.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_ch_Brave.snirf"},
                     "movie_peppa": {
-                        "format": lambda d_id: f"{d_id}_child_Peppa.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_ch_Peppa.snirf"},
                     "movie_incredibles": {
-                        "format": lambda d_id: f"{d_id}_child_Incredibles.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_ch_Incredibles.snirf"},
                     "fc1": {
-                        "format": lambda d_id: f"{d_id}_child_fc1.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_ch_Talk1.snirf"},
                     "fc2": {
-                        "format": lambda d_id: f"{d_id}_child_fc2.snirf"}
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_ch_Talk2.snirf"}
                 },
                 "caregiver_dir":{
-                    "format": lambda d_id: f"{d_id}_caregiver",
+                    "format": lambda d_id: f"caregiver",
                     "movie_brave": {
-                        "format": lambda d_id: f"{d_id}_caregiver_Brave.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_cg_Brave.snirf"},
                     "movie_peppa": {
-                        "format": lambda d_id: f"{d_id}_caregiver_Peppa.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_cg_Peppa.snirf"},
                     "movie_incredibles": {
-                        "format": lambda d_id: f"{d_id}_caregiver_Incredibles.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_cg_Incredibles.snirf"},
                     "fc1": {
-                        "format": lambda d_id: f"{d_id}_caregiver_fc1.snirf"},
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_cg_Talk1.snirf"},
                     "fc2": {
-                        "format": lambda d_id: f"{d_id}_caregiver_fc2.snirf"}
+                        "format": lambda d_id: f"{d_id[0]}_{d_id[1:]}_FNIRS_cg_Talk2.snirf"}
                 }
             }
         }
@@ -96,3 +88,5 @@ SNIRF_GOAL_STRUCTURE = {
     "metaDataTags": True, # adjust: device_timestamp, first_timestamp, missing_sample, sample_index, sync_point(?)
     "probe": True
 }
+
+PADDING = 2.00
