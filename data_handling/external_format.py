@@ -4,8 +4,8 @@ import h5py
 import numpy as np
 import shutil
 
-import snirf_handling as snirf
-import config_handling as conf
+import data_handling.snirf_handling as snirf
+import data_handling.config_handling as conf
 
 def _resolve_path(dyad_id, external_structure, role=None, file_key=None):
     """

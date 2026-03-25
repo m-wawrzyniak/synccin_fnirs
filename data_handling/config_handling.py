@@ -1,4 +1,5 @@
-ROOT = "E://SYNCC_IN//FNIRS//"
+#ROOT = "E://SYNCC_IN//FNIRS//"
+ROOT = "C://Users//user//Desktop//SYNCC-IN//FNIRS//"
 # ROOT = "/media/mateusz-wawrzyniak/ADATA SE880/DATA/FNIRS/fnirs_data_raw/"
 
 # RAW DB

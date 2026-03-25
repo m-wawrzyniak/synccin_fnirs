@@ -5,7 +5,7 @@ import os
 import re
 from collections import defaultdict
 
-import config_handling as conf
+import data_handling.config_handling as conf
 
 
 def create_meta_df(

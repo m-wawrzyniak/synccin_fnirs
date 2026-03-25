@@ -2,9 +2,8 @@ import os
 import shutil
 import pandas as pd
 
-from snirf_handling import create_meta_df
-
-import config_handling as conf
+from data_handling.snirf_handling import create_meta_df
+import data_handling.config_handling as conf
 
 def create_internal_db_format(paths_df_child, paths_df_care, output_db_dir):
     """
