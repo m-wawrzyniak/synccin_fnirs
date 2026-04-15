@@ -1,4 +1,5 @@
 """
+Relates to 02_screen_quality_window.py
 This was adjusted for my own purpose.
 Methodological choices made by Andrea.
 """

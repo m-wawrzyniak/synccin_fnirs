@@ -39,9 +39,13 @@ dyads = np.sort(os.listdir(f'{processeddir}/{dataset}/WC'))
 #%% process all sessions
 results_all_sessions = []
 for session in sessions:
+    print(f"qc05: Starting for session {session}")
 
     data_all = []
-    for dyad in [dyads[0], dyads[0]]:
+    # TODO: Dynamic check how many dyads
+    valid_dyads = []
+    for dyad in dyads:
+        print(f"qc05: Attempting load for dyad {dyad}")
         filename_child = f'{dyad}_WC_ch_{session}.nc'
         filename_careg = f'{dyad}_WC_cg_{session}.nc'
 
@@ -52,9 +56,11 @@ for session in sessions:
         try:
             child_present = filename_child in os.listdir(path_child)
             careg_present = filename_careg in os.listdir(path_careg)
+            print("\t Success.")
         except:
             child_present = False
             careg_present = False
+            print("\t Dyad not found.")
 
         #load files if both are present
         if child_present and careg_present:
@@ -64,14 +70,18 @@ for session in sessions:
             wt_dyad = xr.concat([wt_child, wt_careg], dim='member', join='inner')
             wt_dyad['member'] = ['child', 'caregiver']
             data_all.append(wt_dyad)
+            valid_dyads.append(dyad)
 
     #concatenate all dyads for this session
+    # TODO: Using dynamically appended dyads
     data_all_xr = xr.concat(data_all, dim='dyad')
-    data_all_xr['dyad'] = dyads
+    data_all_xr['dyad'] = valid_dyads
 
     #%% for all channels
     results_all_channels = []
-    for i_ch in data_all_xr['channel']:
+    print("qc05: Processing individual channels")
+    for idx, i_ch in enumerate(data_all_xr['channel']):
+        print(f"qc05: Processing for channel {idx}")
 
         data_ch = data_all_xr.isel({'channel': i_ch, 'component': 0})
 
