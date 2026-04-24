@@ -1,0 +1,9 @@
+
+conda create -n fnirs_conda_sync python=3.12
+
+conda activate fnirs_conda_sync
+
+conda install -c conda-forge numpy xarray pandas matplotlib scipy h5netcdf netcdf4 tqdm
+
+cd C:\Users\user\PycharmProjects\pyphysio
+pip install -e . --config-settings editable_mode=compat
